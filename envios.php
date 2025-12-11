@@ -103,6 +103,13 @@ function olist_envios_shipping_method_init() {
                     'products' => $products,
                 );
 
+                $cache_key = 'olist_envios_quote_' . md5( json_encode( $data ) );
+                $cached_response = get_transient( $cache_key );
+
+                if ( false !== $cached_response ) {
+                    return $cached_response;
+                }
+
                 $body = json_encode( $data );
 
                 $response = wp_remote_post( $url, array(
@@ -119,7 +126,13 @@ function olist_envios_shipping_method_init() {
                 }
                 
                 $json_data = wp_remote_retrieve_body( $response );
-                return json_decode( $json_data, true );
+                $result = json_decode( $json_data, true );
+
+                if ( $result ) {
+                    set_transient( $cache_key, $result, 5 * MINUTE_IN_SECONDS );
+                }
+
+                return $result;
             }
 
 			/**
