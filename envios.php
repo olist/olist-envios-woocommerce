@@ -92,10 +92,10 @@ function olist_envios_shipping_method_init() {
                         'reference' => (string) $product->get_id(),
                         'unit_value' => (float) $product->get_price(),
                         'quantity' => (int) $values['quantity'],
-                        'weight' => (float) $product->get_weight(),
-                        'length' => (float) $product->get_length(),
-                        'width' => (float) $product->get_width(),
-                        'height' => (float) $product->get_height(),
+                        'weight' => (float) wc_get_weight( $product->get_weight(), 'kg' ),
+                        'length' => (float) wc_get_dimension( $product->get_length(), 'cm' ),
+                        'width' => (float) wc_get_dimension( $product->get_width(), 'cm' ),
+                        'height' => (float) wc_get_dimension( $product->get_height(), 'cm' ),
                     );
                 }
 
