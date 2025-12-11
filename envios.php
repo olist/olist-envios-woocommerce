@@ -77,8 +77,7 @@ function olist_envios_shipping_method_init() {
 			}
 
             private function get_shipping_quote($package) {
-                // $url = 'https://envios-api.olist.com/v1/freights/woocommerce';
-                $url = 'https://zhjmnwls-5000.brs.devtunnels.ms/v1/freights/woocommerce';
+				$url = 'https://envios-api.olist.com/v1/freights/woocommerce';
                 $headers = array(
                     'Content-Type' => 'application/json',
                     'x-integration-id' => $this->get_option( 'integration_id' ),
