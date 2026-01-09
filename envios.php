@@ -14,6 +14,14 @@ function olist_envios_init() {
 		// We add an action to init our shipping method class, and a filter to add our shipping method to the method list.
 		add_action( 'woocommerce_shipping_init', 'olist_envios_shipping_method_init' );
 		add_filter( 'woocommerce_shipping_methods', 'olist_envios_shipping_method_add' );
+		// Filter to customize shipping method label HTML to show delivery time
+		add_filter( 'woocommerce_cart_shipping_method_full_label', 'olist_envios_display_delivery_time', 10, 2 );
+		// Hook to add delivery time after shipping rate (alternative method)
+		add_action( 'woocommerce_after_shipping_rate', 'olist_envios_display_delivery_time_after_rate', 10, 2 );
+		// Hook to set delivery_time on rate after it's created
+		add_filter( 'woocommerce_shipping_method_add_rate', 'olist_envios_set_delivery_time_on_rate', 10, 3 );
+		// Filter to format delivery_time with "dias úteis"
+		add_filter( 'woocommerce_shipping_rate_delivery_time', 'olist_envios_format_delivery_time', 10, 2 );
 	}
 }
 add_action( 'plugins_loaded', 'olist_envios_init' );
@@ -67,13 +75,13 @@ function olist_envios_shipping_method_init() {
 			public function calculate_shipping( $package = array() ) {
 				$this->add_rates_from_json( $this->get_shipping_quote($package) );
 
-				/**
-				 * Developers can add additional flat rates based on this one via this action since @version 2.4.
-				 *
-				 * Previously there were (overly complex) options to add additional rates however this was not user.
-				 * friendly and goes against what Flat Rate Shipping was originally intended for.
-				 */
-				do_action( 'woocommerce_' . $this->id . '_shipping_add_rate', $this, $rate );
+			/**
+			 * Developers can add additional flat rates based on this one via this action since @version 2.4.
+			 *
+			 * Previously there were (overly complex) options to add additional rates however this was not user.
+			 * friendly and goes against what Flat Rate Shipping was originally intended for.
+			 */
+			do_action( 'woocommerce_' . $this->id . '_shipping_add_rate', $this );
 			}
 
             private function get_shipping_quote($package) {
@@ -165,14 +173,14 @@ function olist_envios_shipping_method_init() {
 			 * @param array $data Data with quotes.
 			 */
 			public function add_rates_from_json( $data ) {
-
 				if ( ! empty( $data['quotes'] ) && is_array( $data['quotes'] ) ) {
 					foreach ( $data['quotes'] as $quote ) {
 						$rate = array(
-                            'id'        => 'olist-envios.' . $quote['carrier_name'],
-                            'label'     => sprintf('%s - %s dias', $quote['display_name'], $quote['delivery_time'])  ,
-							'cost'      => $quote['total_cost'],
-							'meta_data' => array(
+                            'id'            => 'olist-envios.' . $quote['carrier_slug'],
+                            'label'         => $quote['display_name'],
+							'cost'          => $quote['total_cost'],
+							'delivery_time' => (string) $quote['delivery_time'],
+							'meta_data'     => array(
 								'delivery_time' => $quote['delivery_time'],
 							),
 						);
@@ -218,5 +226,170 @@ function olist_envios_shipping_method_init() {
 				);
 			}
 		}
+	}
+}
+
+/**
+ * Format delivery_time with "dias úteis" text
+ *
+ * @param string $delivery_time The delivery time value.
+ * @param WC_Shipping_Rate $rate The shipping rate object.
+ * @return string Formatted delivery time.
+ */
+function olist_envios_format_delivery_time( $delivery_time, $rate ) {
+	// Check if this is an Olist Envios shipping method
+	if ( ! is_a( $rate, 'WC_Shipping_Rate' ) ) {
+		return $delivery_time;
+	}
+
+	$method_id = $rate->get_id();
+	if ( empty( $method_id ) || strpos( $method_id, 'olist-envios.' ) === false ) {
+		return $delivery_time;
+	}
+
+	// If delivery_time is empty or not numeric, return as is
+	if ( empty( $delivery_time ) || ! is_numeric( $delivery_time ) ) {
+		return $delivery_time;
+	}
+
+	// Format with "dias úteis"
+	$days = absint( $delivery_time );
+	return sprintf(
+		'%d %s',
+		$days,
+		_n( 'dia útil', 'dias úteis', $days, 'olist-envios' )
+	);
+}
+
+/**
+ * Set delivery_time on rate after it's created
+ *
+ * @param WC_Shipping_Rate $rate The shipping rate object.
+ * @param array            $args The arguments passed to add_rate.
+ * @param WC_Shipping_Method $method The shipping method object.
+ * @return WC_Shipping_Rate Modified rate object.
+ */
+function olist_envios_set_delivery_time_on_rate( $rate, $args, $method ) {
+	// Check if this is an Olist Envios shipping method
+	if ( ! is_a( $method, 'WC_Olist_Envios_Shipping_Method' ) ) {
+		return $rate;
+	}
+
+	// Try to get delivery_time from args
+	if ( ! empty( $args['delivery_time'] ) ) {
+		$rate->set_delivery_time( $args['delivery_time'] );
+	} elseif ( ! empty( $args['meta_data']['delivery_time'] ) ) {
+		$rate->set_delivery_time( $args['meta_data']['delivery_time'] );
+	}
+
+	return $rate;
+}
+
+/**
+ * Customize shipping method label to display delivery time from meta_data
+ *
+ * @param string $label The shipping method label.
+ * @param object $method The shipping method object (WC_Shipping_Rate).
+ * @return string Modified label with delivery time.
+ */
+function olist_envios_display_delivery_time( $label, $method ) {
+	// Check if method object is valid
+	if ( ! is_object( $method ) || ! method_exists( $method, 'get_id' ) ) {
+		return $label;
+	}
+
+	// Get method ID - try both get_id() and direct property access
+	$method_id = method_exists( $method, 'get_id' ) ? $method->get_id() : ( isset( $method->id ) ? $method->id : '' );
+	
+	// Check if this is an Olist Envios shipping method
+	if ( empty( $method_id ) || strpos( $method_id, 'olist-envios.' ) === false ) {
+		return $label;
+	}
+
+	$delivery_time = null;
+
+	// Try to get delivery_time directly from the rate object first (preferred method)
+	if ( method_exists( $method, 'get_delivery_time' ) ) {
+		$delivery_time = $method->get_delivery_time();
+	}
+
+	// If not found or empty, try to get from meta_data
+	if ( empty( $delivery_time ) ) {
+		$meta_data = array();
+		if ( method_exists( $method, 'get_meta_data' ) ) {
+			$meta_data = $method->get_meta_data();
+			
+			if ( ! empty( $meta_data['delivery_time'] ) ) {
+				$delivery_time = $meta_data['delivery_time'];
+			}
+		}
+	}
+
+	// If delivery_time exists, add it to the label
+	if ( ! empty( $delivery_time ) ) {
+		$delivery_time = absint( $delivery_time );
+		
+		// Format delivery time text
+		$delivery_text = sprintf(
+			' <small class="olist-delivery-time">(%s %s)</small>',
+			esc_html( $delivery_time ),
+			_n( 'dia útil', 'dias úteis', $delivery_time, 'olist-envios' )
+		);
+		
+		// Append delivery time to the label
+		$label .= $delivery_text;
+	}
+
+	return $label;
+}
+
+/**
+ * Display delivery time after shipping rate using hook
+ * This is an alternative method that adds HTML after the label
+ *
+ * @param object $method The shipping method object (WC_Shipping_Rate).
+ * @param int    $index  The shipping method index.
+ */
+function olist_envios_display_delivery_time_after_rate( $method, $index ) {
+	// Check if method object is valid
+	if ( ! is_object( $method ) || ! method_exists( $method, 'get_id' ) ) {
+		return;
+	}
+
+	// Get method ID
+	$method_id = method_exists( $method, 'get_id' ) ? $method->get_id() : ( isset( $method->id ) ? $method->id : '' );
+	
+	// Check if this is an Olist Envios shipping method
+	if ( empty( $method_id ) || strpos( $method_id, 'olist-envios.' ) === false ) {
+		return;
+	}
+
+	$delivery_time = null;
+
+	// Try to get delivery_time directly from the rate object first (preferred method)
+	if ( method_exists( $method, 'get_delivery_time' ) ) {
+		$delivery_time = $method->get_delivery_time();
+	}
+
+	// If not found or empty, try to get from meta_data
+	if ( empty( $delivery_time ) ) {
+		$meta_data = array();
+		if ( method_exists( $method, 'get_meta_data' ) ) {
+			$meta_data = $method->get_meta_data();
+			
+			if ( ! empty( $meta_data['delivery_time'] ) ) {
+				$delivery_time = $meta_data['delivery_time'];
+			}
+		}
+	}
+
+	// If delivery_time exists, display it
+	if ( ! empty( $delivery_time ) ) {
+		$delivery_time = absint( $delivery_time );
+		printf(
+			'<div class="olist-delivery-time-wrapper"><small class="olist-delivery-time">%s %s</small></div>',
+			esc_html( $delivery_time ),
+			esc_html( _n( 'dia útil', 'dias úteis', $delivery_time, 'olist-envios' ) )
+		);
 	}
 }
