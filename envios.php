@@ -3,7 +3,7 @@
  * Plugin Name: Envios da Olist
  * Plugin URI: ttps://envios.olist.com/integracoes/woocommerce
  * Description: Envios da Olist para WooCommerce
- * Version: 1.0.0
+ * Version: 1.0.1
  * Author: Olist
  * Author URI: https://olist.com/envios
  * Text Domain: olist-envios
@@ -216,6 +216,13 @@ function olist_envios_shipping_method_init() {
 			private function init_instance_form_fields() {
 				// Start the array of fields.
 				$this->instance_form_fields = array(
+					'title' => array(
+						'title'       => __( 'Título', 'olist-envios' ),
+						'type'        => 'text',
+						'description' => __( 'Título do método de entrega exibido para o cliente.', 'olist-envios' ),
+						'default'     => __( 'Envios da Olist', 'olist-envios' ),
+						'desc_tip'    => true,
+					),
 					'integration_id' => array(
 						'title'       => __( 'Token de integração', 'olist-envios' ),
 						'type'        => 'text',
