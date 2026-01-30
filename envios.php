@@ -175,13 +175,21 @@ function olist_envios_shipping_method_init() {
 			public function add_rates_from_json( $data ) {
 				if ( ! empty( $data['quotes'] ) && is_array( $data['quotes'] ) ) {
 					foreach ( $data['quotes'] as $quote ) {
+						// Prefer custom_delivery_time when provided by the API; fallback to delivery_time for compatibility
+						$delivery_time_value = null;
+						if ( isset( $quote['custom_delivery_time'] ) && $quote['custom_delivery_time'] !== '' ) {
+							$delivery_time_value = $quote['custom_delivery_time'];
+						} elseif ( isset( $quote['delivery_time'] ) ) {
+							$delivery_time_value = $quote['delivery_time'];
+						}
+
 						$rate = array(
                             'id'            => 'olist-envios.' . $quote['carrier_slug'],
                             'label'         => $quote['display_name'],
 							'cost'          => $quote['total_cost'],
-							'delivery_time' => (string) $quote['delivery_time'],
+							'delivery_time' => (string) $delivery_time_value,
 							'meta_data'     => array(
-								'delivery_time' => $quote['delivery_time'],
+								'delivery_time' => $delivery_time_value,
 							),
 						);
 
