@@ -3,7 +3,7 @@
  * Plugin Name: Envios da Olist
  * Plugin URI: ttps://envios.olist.com/integracoes/woocommerce
  * Description: Envios da Olist para WooCommerce
- * Version: 1.0.1
+ * Version: 1.0.2
  * Author: Olist
  * Author URI: https://olist.com/envios
  * Text Domain: olist-envios
@@ -132,7 +132,7 @@ function olist_envios_shipping_method_init() {
                 if ( 201 !== wp_remote_retrieve_response_code( $response ) ) {
                     return false;
                 }
-                
+
                 $json_data = wp_remote_retrieve_body( $response );
                 $result = json_decode( $json_data, true );
 
@@ -183,10 +183,13 @@ function olist_envios_shipping_method_init() {
 							$delivery_time_value = $quote['delivery_time'];
 						}
 
+						// Prefer custom_cost when provided by the API; fallback to total_cost
+						$cost = $quote['custom_cost'] ?? $quote['total_cost'];
+
 						$rate = array(
                             'id'            => 'olist-envios.' . $quote['carrier_slug'],
                             'label'         => $quote['display_name'],
-							'cost'          => $quote['total_cost'],
+							'cost'          => $cost,
 							'delivery_time' => (string) $delivery_time_value,
 							'meta_data'     => array(
 								'delivery_time' => $delivery_time_value,
@@ -315,7 +318,7 @@ function olist_envios_display_delivery_time( $label, $method ) {
 
 	// Get method ID - try both get_id() and direct property access
 	$method_id = method_exists( $method, 'get_id' ) ? $method->get_id() : ( isset( $method->id ) ? $method->id : '' );
-	
+
 	// Check if this is an Olist Envios shipping method
 	if ( empty( $method_id ) || strpos( $method_id, 'olist-envios.' ) === false ) {
 		return $label;
@@ -333,7 +336,7 @@ function olist_envios_display_delivery_time( $label, $method ) {
 		$meta_data = array();
 		if ( method_exists( $method, 'get_meta_data' ) ) {
 			$meta_data = $method->get_meta_data();
-			
+
 			if ( ! empty( $meta_data['delivery_time'] ) ) {
 				$delivery_time = $meta_data['delivery_time'];
 			}
@@ -343,14 +346,14 @@ function olist_envios_display_delivery_time( $label, $method ) {
 	// If delivery_time exists, add it to the label
 	if ( ! empty( $delivery_time ) ) {
 		$delivery_time = absint( $delivery_time );
-		
+
 		// Format delivery time text
 		$delivery_text = sprintf(
 			' <small class="olist-delivery-time">(%s %s)</small>',
 			esc_html( $delivery_time ),
 			_n( 'dia útil', 'dias úteis', $delivery_time, 'olist-envios' )
 		);
-		
+
 		// Append delivery time to the label
 		$label .= $delivery_text;
 	}
@@ -373,7 +376,7 @@ function olist_envios_display_delivery_time_after_rate( $method, $index ) {
 
 	// Get method ID
 	$method_id = method_exists( $method, 'get_id' ) ? $method->get_id() : ( isset( $method->id ) ? $method->id : '' );
-	
+
 	// Check if this is an Olist Envios shipping method
 	if ( empty( $method_id ) || strpos( $method_id, 'olist-envios.' ) === false ) {
 		return;
@@ -391,7 +394,7 @@ function olist_envios_display_delivery_time_after_rate( $method, $index ) {
 		$meta_data = array();
 		if ( method_exists( $method, 'get_meta_data' ) ) {
 			$meta_data = $method->get_meta_data();
-			
+
 			if ( ! empty( $meta_data['delivery_time'] ) ) {
 				$delivery_time = $meta_data['delivery_time'];
 			}
