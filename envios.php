@@ -183,8 +183,11 @@ function olist_envios_shipping_method_init() {
 							$delivery_time_value = $quote['delivery_time'];
 						}
 
-						// Prefer custom_cost when provided by the API; fallback to total_cost
-						$cost = $quote['custom_cost'] ?? $quote['total_cost'];
+						// Prefer custom_total_cost when provided by the API; fallback to total_cost
+						$cost = $quote['total_cost'];
+						if ( isset( $quote['custom_total_cost'] ) && $quote['custom_total_cost'] !== '' ) {
+							$cost = $quote['custom_total_cost'];
+						}
 
 						$rate = array(
                             'id'            => 'olist-envios.' . $quote['carrier_slug'],
