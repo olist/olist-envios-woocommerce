@@ -1,7 +1,7 @@
 <?php
 /**
  * Plugin Name: Envios da Olist
- * Plugin URI: ttps://envios.olist.com/integracoes/woocommerce
+ * Plugin URI: https://envios.olist.com/integracoes/woocommerce
  * Description: Envios da Olist para WooCommerce
  * Version: 1.0.2
  * Author: Olist
