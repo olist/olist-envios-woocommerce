@@ -96,7 +96,7 @@ function olist_envios_shipping_method_init() {
                 foreach ($package['contents'] as $item_id => $values) {
                     $product = $values['data'];
                     $products[] = array(
-                        'reference' => (string) $product->get_id(),
+                        'reference' => (string) ( $product->get_sku() ?: $product->get_id() ),
                         'unit_value' => (float) $product->get_price(),
                         'quantity' => (int) $values['quantity'],
                         'weight' => (float) wc_get_weight( $product->get_weight(), 'kg' ),
