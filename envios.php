@@ -3,7 +3,7 @@
  * Plugin Name: Envios da Olist
  * Plugin URI: https://envios.olist.com/integracoes/woocommerce
  * Description: Envios da Olist para WooCommerce
- * Version: 1.0.2
+ * Version: 1.0.3
  * Author: Olist
  * Author URI: https://olist.com/envios
  * Text Domain: olist-envios
@@ -96,7 +96,7 @@ function olist_envios_shipping_method_init() {
                 foreach ($package['contents'] as $item_id => $values) {
                     $product = $values['data'];
                     $products[] = array(
-                        'reference' => (string) $product->get_id(),
+                        'reference' => (string) ( $product->get_sku() ?: $product->get_id() ),
                         'unit_value' => (float) $product->get_price(),
                         'quantity' => (int) $values['quantity'],
                         'weight' => (float) wc_get_weight( $product->get_weight(), 'kg' ),
