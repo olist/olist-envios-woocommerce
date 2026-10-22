@@ -3,7 +3,7 @@
  * Plugin Name: Envios da Olist
  * Plugin URI: https://envios.olist.com/integracoes/woocommerce
  * Description: Envios da Olist para WooCommerce
- * Version: 1.0.2
+ * Version: 1.0.3
  * Author: Olist
  * Author URI: https://olist.com/envios
  * Text Domain: olist-envios
